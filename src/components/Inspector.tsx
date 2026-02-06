@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { InfoIcon, LayersIcon, PaletteIcon, ChevronDownIcon, DownloadIcon, EyeIcon, EyeOffIcon, ResetIcon } from "./Icons";
+import { InfoIcon, LayersIcon, PaletteIcon, SpeedIcon, ChevronDownIcon, DownloadIcon, EyeIcon, EyeOffIcon, ResetIcon } from "./Icons";
 import { extractColors, applyModifications } from "@/lib/lottieUtils";
 import type { LottieFile } from "@/hooks/useLottieStore";
 
@@ -10,10 +10,13 @@ interface InspectorProps {
   file: LottieFile | null;
   colorOverrides: Record<string, string>;
   hiddenLayers: number[];
+  speed: number;
   onColorChange: (originalHex: string, newHex: string) => void;
   onResetColors: () => void;
   onToggleLayer: (layerIndex: number) => void;
+  onSpeedChange: (speed: number) => void;
 }
+
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -137,9 +140,11 @@ export default function Inspector({
   file,
   colorOverrides,
   hiddenLayers,
+  speed,
   onColorChange,
   onResetColors,
   onToggleLayer,
+  onSpeedChange,
 }: InspectorProps) {
   const colors = useMemo(() => {
     if (!file) return [];
@@ -148,18 +153,20 @@ export default function Inspector({
 
   const modifiedCount = Object.keys(colorOverrides).length;
   const hiddenCount = hiddenLayers.length;
+  const isSpeedModified = speed !== 1;
+  const hasAnyModification = modifiedCount > 0 || hiddenCount > 0 || isSpeedModified;
 
   const handleDownload = useCallback(() => {
     if (!file) return;
-    const modified = applyModifications(file.data, colorOverrides, hiddenLayers);
+    const modified = applyModifications(file.data, colorOverrides, hiddenLayers, speed);
     const blob = new Blob([JSON.stringify(modified, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = file.name.replace(/\.json$/, "") + (modifiedCount > 0 || hiddenCount > 0 ? "-modified" : "") + ".json";
+    a.download = file.name.replace(/\.json$/, "") + (hasAnyModification ? "-modified" : "") + ".json";
     a.click();
     URL.revokeObjectURL(url);
-  }, [file, colorOverrides, hiddenLayers, modifiedCount, hiddenCount]);
+  }, [file, colorOverrides, hiddenLayers, speed, hasAnyModification]);
 
   return (
     <div
@@ -198,6 +205,53 @@ export default function Inspector({
                 <PropertyRow label="Frames" value={`${file.meta.totalFrames}`} mono />
                 <PropertyRow label="Duration" value={`${file.meta.duration.toFixed(2)}s`} mono />
                 <PropertyRow label="File Size" value={formatSize(file.size)} mono />
+              </CollapsibleSection>
+
+              {/* Speed section */}
+              <CollapsibleSection
+                title="Speed"
+                icon={<SpeedIcon size={13} />}
+              >
+                <div className="mt-1">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min={0.1}
+                      max={3}
+                      step={0.1}
+                      value={speed}
+                      onChange={(e) => onSpeedChange(parseFloat(e.target.value))}
+                      className="speed-slider flex-1 h-1.5 rounded-full appearance-none cursor-pointer"
+                      style={{ accentColor: "var(--bg-accent)" }}
+                    />
+                    <span
+                      className="text-[11px] font-mono font-medium tabular-nums w-[34px] text-right shrink-0"
+                      style={{ color: isSpeedModified ? "var(--bg-accent)" : "var(--text-secondary)" }}
+                    >
+                      {speed.toFixed(1)}x
+                    </span>
+                  </div>
+                  <div className="flex justify-between mt-1.5 px-0.5">
+                    {[0.5, 1, 2, 3].map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => onSpeedChange(s)}
+                        className="text-[9px] font-mono font-medium transition-colors duration-100"
+                        style={{
+                          color: s === speed ? "var(--bg-accent)" : "var(--text-tertiary)",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (s !== speed) e.currentTarget.style.color = "var(--text-secondary)";
+                        }}
+                        onMouseLeave={(e) => {
+                          if (s !== speed) e.currentTarget.style.color = s === speed ? "var(--bg-accent)" : "var(--text-tertiary)";
+                        }}
+                      >
+                        {s}x
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </CollapsibleSection>
 
               {/* Colors section */}
@@ -371,7 +425,7 @@ export default function Inspector({
             }}
           >
             <DownloadIcon size={14} />
-            Download{(modifiedCount > 0 || hiddenCount > 0) ? " Modified" : ""}
+            Download{hasAnyModification ? " Modified" : ""}
           </button>
         </div>
       )}

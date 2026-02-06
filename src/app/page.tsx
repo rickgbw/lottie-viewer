@@ -17,7 +17,7 @@ export default function Home() {
     removeAllFiles,
     selectFile,
     setPlaying,
-    setSpeed,
+    setFileSpeed,
     setLoop,
     toggleDirection,
     setShowGrid,
@@ -126,7 +126,6 @@ export default function Home() {
         files={state.files}
         selectedId={state.selectedId}
         isPlaying={state.isPlaying}
-        speed={state.speed}
         loop={state.loop}
         direction={state.direction}
         showGrid={state.showGrid}
@@ -136,7 +135,6 @@ export default function Home() {
         onSelect={selectFile}
         onRemove={removeFile}
         onPlayPause={setPlaying}
-        onSpeedChange={setSpeed}
         onLoopToggle={setLoop}
         onDirectionToggle={toggleDirection}
         onShowGridChange={setShowGrid}
@@ -145,6 +143,7 @@ export default function Home() {
         onToggleCardPlay={toggleCardPlaying}
         colorOverrides={state.colorOverrides}
         hiddenLayers={state.hiddenLayers}
+        speedOverrides={state.speedOverrides}
       />
 
       {/* Inspector panel */}
@@ -152,6 +151,7 @@ export default function Home() {
         file={selectedFile}
         colorOverrides={selectedFile ? (state.colorOverrides[selectedFile.id] || {}) : {}}
         hiddenLayers={selectedFile ? (state.hiddenLayers[selectedFile.id] || []) : []}
+        speed={selectedFile ? (state.speedOverrides[selectedFile.id] || 1) : 1}
         onColorChange={(originalHex, newHex) => {
           if (selectedFile) setColorOverride(selectedFile.id, originalHex, newHex);
         }}
@@ -160,6 +160,9 @@ export default function Home() {
         }}
         onToggleLayer={(layerIndex) => {
           if (selectedFile) toggleLayerVisibility(selectedFile.id, layerIndex);
+        }}
+        onSpeedChange={(speed) => {
+          if (selectedFile) setFileSpeed(selectedFile.id, speed);
         }}
       />
     </div>

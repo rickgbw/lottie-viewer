@@ -27,7 +27,6 @@ export interface ViewerState {
   files: LottieFile[];
   selectedId: string | null;
   isPlaying: boolean;
-  speed: number;
   loop: boolean;
   direction: 1 | -1;
   showGrid: boolean;
@@ -40,6 +39,8 @@ export interface ViewerState {
   colorOverrides: Record<string, Record<string, string>>;
   /** Per-file hidden layer indices: fileId → number[] */
   hiddenLayers: Record<string, number[]>;
+  /** Per-file speed overrides: fileId → speed multiplier */
+  speedOverrides: Record<string, number>;
 }
 
 function extractMeta(data: Record<string, unknown>): LottieFile["meta"] {
@@ -68,7 +69,6 @@ export function useLottieStore() {
     files: [],
     selectedId: null,
     isPlaying: false,
-    speed: 1,
     loop: true,
     direction: 1,
     showGrid: true,
@@ -78,6 +78,7 @@ export function useLottieStore() {
     cardPlayingMap: {},
     colorOverrides: {},
     hiddenLayers: {},
+    speedOverrides: {},
   });
 
   const addFiles = useCallback((newFiles: { name: string; data: Record<string, unknown>; size: number }[]) => {
@@ -122,8 +123,16 @@ export function useLottieStore() {
     }));
   }, []);
 
-  const setSpeed = useCallback((speed: number) => {
-    setState((prev) => ({ ...prev, speed }));
+  const setFileSpeed = useCallback((fileId: string, speed: number) => {
+    setState((prev) => {
+      const overrides = { ...prev.speedOverrides };
+      if (speed === 1) {
+        delete overrides[fileId];
+      } else {
+        overrides[fileId] = speed;
+      }
+      return { ...prev, speedOverrides: overrides };
+    });
   }, []);
 
   const setLoop = useCallback((loop: boolean) => {
@@ -216,6 +225,7 @@ export function useLottieStore() {
       cardPlayingMap: {},
       colorOverrides: {},
       hiddenLayers: {},
+      speedOverrides: {},
     }));
   }, []);
 
@@ -229,7 +239,7 @@ export function useLottieStore() {
     removeAllFiles,
     selectFile,
     setPlaying,
-    setSpeed,
+    setFileSpeed,
     setLoop,
     toggleDirection,
     setShowGrid,

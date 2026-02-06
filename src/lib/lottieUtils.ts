@@ -66,6 +66,7 @@ export function applyModifications(
   data: Record<string, unknown>,
   colorOverrides: Record<string, string>,
   hiddenLayerIndices: number[],
+  speed?: number,
 ): Record<string, unknown> {
   const clone: Record<string, unknown> = JSON.parse(JSON.stringify(data));
 
@@ -113,6 +114,11 @@ export function applyModifications(
   if (hiddenLayerIndices.length > 0 && Array.isArray(clone.layers)) {
     const hiddenSet = new Set(hiddenLayerIndices);
     clone.layers = (clone.layers as unknown[]).filter((_, i) => !hiddenSet.has(i));
+  }
+
+  // Apply speed by modifying frame rate
+  if (speed && speed !== 1 && typeof clone.fr === "number") {
+    clone.fr = clone.fr * speed;
   }
 
   return clone;

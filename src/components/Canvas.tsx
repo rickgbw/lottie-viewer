@@ -4,14 +4,13 @@ import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence } from "motion/react";
 import LottieCard from "./LottieCard";
-import { PlayIcon, PauseIcon, LoopIcon, ReverseIcon, SpeedIcon, UploadIcon, GridSmallIcon, GridMediumIcon, GridLargeIcon, GridXLargeIcon } from "./Icons";
+import { PlayIcon, PauseIcon, LoopIcon, ReverseIcon, UploadIcon, GridSmallIcon, GridMediumIcon, GridLargeIcon, GridXLargeIcon } from "./Icons";
 import type { LottieFile, GridSize } from "@/hooks/useLottieStore";
 
 interface CanvasProps {
   files: LottieFile[];
   selectedId: string | null;
   isPlaying: boolean;
-  speed: number;
   loop: boolean;
   direction: 1 | -1;
   showGrid: boolean;
@@ -21,7 +20,6 @@ interface CanvasProps {
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
   onPlayPause: (playing: boolean) => void;
-  onSpeedChange: (speed: number) => void;
   onLoopToggle: (loop: boolean) => void;
   onDirectionToggle: () => void;
   onShowGridChange: (show: boolean) => void;
@@ -30,9 +28,8 @@ interface CanvasProps {
   onToggleCardPlay: (id: string) => void;
   colorOverrides: Record<string, Record<string, string>>;
   hiddenLayers: Record<string, number[]>;
+  speedOverrides: Record<string, number>;
 }
-
-const SPEED_OPTIONS = [0.25, 0.5, 1, 1.5, 2, 3];
 
 const GRID_SIZE_CONFIG: Record<GridSize, { minWidth: string; label: string }> = {
   small: { minWidth: "160px", label: "Small" },
@@ -52,7 +49,6 @@ export default function Canvas({
   files,
   selectedId,
   isPlaying,
-  speed,
   loop,
   direction,
   showGrid,
@@ -61,7 +57,6 @@ export default function Canvas({
   onSelect,
   onRemove,
   onPlayPause,
-  onSpeedChange,
   onLoopToggle,
   onDirectionToggle,
   onShowGridChange,
@@ -71,6 +66,7 @@ export default function Canvas({
   cardPlayingMap,
   colorOverrides,
   hiddenLayers,
+  speedOverrides,
 }: CanvasProps) {
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -164,54 +160,6 @@ export default function Canvas({
           >
             <LoopIcon size={14} />
           </button>
-
-          {/* Speed selector */}
-          <div className="relative group">
-            <button
-              className="flex items-center gap-1 h-7 px-2 rounded-md transition-all duration-100 text-[11px] font-medium font-mono tabular-nums"
-              style={{
-                color: speed !== 1 ? "var(--bg-accent)" : "var(--text-tertiary)",
-                background: speed !== 1 ? "var(--bg-accent-subtle)" : "transparent",
-              }}
-              onMouseEnter={(e) => {
-                if (speed === 1) e.currentTarget.style.background = "var(--bg-canvas)";
-              }}
-              onMouseLeave={(e) => {
-                if (speed === 1) e.currentTarget.style.background = "transparent";
-              }}
-            >
-              <SpeedIcon size={13} />
-              {speed}x
-            </button>
-            <div
-              className="absolute top-full left-1/2 -translate-x-1/2 mt-1 py-1.5 rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 min-w-[64px] z-50"
-              style={{
-                background: "var(--bg-panel)",
-                boxShadow: "var(--shadow-lg)",
-                border: "1px solid var(--border-default)",
-              }}
-            >
-              {SPEED_OPTIONS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => onSpeedChange(s)}
-                  className="flex items-center justify-center w-full px-3 py-1 text-[11px] font-mono font-medium transition-colors duration-75"
-                  style={{
-                    color: s === speed ? "var(--bg-accent)" : "var(--text-secondary)",
-                    background: s === speed ? "var(--bg-accent-subtle)" : "transparent",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (s !== speed) e.currentTarget.style.background = "var(--bg-surface-hover)";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (s !== speed) e.currentTarget.style.background = "transparent";
-                  }}
-                >
-                  {s}x
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Center: Count */}
@@ -339,7 +287,7 @@ export default function Canvas({
                     file={file}
                     isSelected={file.id === selectedId}
                     isCardPlaying={isPlaying || !!cardPlayingMap[file.id]}
-                    speed={speed}
+                    speed={speedOverrides[file.id] || 1}
                     loop={loop}
                     direction={direction}
                     bgColor={bgColor}
