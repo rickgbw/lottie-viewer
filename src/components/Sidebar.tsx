@@ -210,7 +210,7 @@ export default function Sidebar({ files, selectedId, bgColor, onSelect, onRemove
       </div>
 
       {/* File list */}
-      <div className="flex-1 overflow-y-auto px-2" {...(files.length === 0 ? getRootProps() : {})}>
+      <div className="flex-1 overflow-y-auto px-2">
         <input {...getInputProps()} />
         <AnimatePresence mode="popLayout">
           {files.length === 0 ? (
@@ -219,26 +219,11 @@ export default function Sidebar({ files, selectedId, bgColor, onSelect, onRemove
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-col items-center justify-center gap-3 h-full px-4"
+              className="flex items-center justify-center h-full px-4"
             >
-              <div
-                className="flex h-14 w-14 items-center justify-center rounded-xl"
-                style={{
-                  background: isDragActive ? "var(--bg-accent-subtle)" : "var(--bg-canvas)",
-                  border: isDragActive ? "2px dashed var(--bg-accent)" : "2px dashed var(--border-strong)",
-                  transition: "all 0.2s ease",
-                }}
-              >
-                <UploadIcon size={22} />
-              </div>
-              <div className="text-center">
-                <p className="text-[12px] font-medium" style={{ color: "var(--text-primary)" }}>
-                  Drop .json files here
-                </p>
-                <p className="text-[11px] mt-1" style={{ color: "var(--text-tertiary)" }}>
-                  or click to browse
-                </p>
-              </div>
+              <p className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+                No animations yet
+              </p>
             </motion.div>
           ) : (
             files.map((file, index) => (
