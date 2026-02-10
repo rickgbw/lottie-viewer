@@ -44,10 +44,17 @@ export default function LottieCard({
   onTogglePlay,
 }: LottieCardProps) {
   const lottieRef = useRef<LottieRefCurrentProps>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState(false);
   const [currentFrame, setCurrentFrame] = useState(0);
 
   const isPlaying = isCardPlaying;
+
+  useEffect(() => {
+    if (isSelected && cardRef.current) {
+      cardRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [isSelected]);
 
   const hasModifications = Object.keys(colorOverrides).length > 0 || hiddenLayers.length > 0;
   const modifiedData = useMemo(() => {
@@ -104,6 +111,7 @@ export default function LottieCard({
 
   return (
     <motion.div
+      ref={cardRef}
       initial={{ opacity: 0, y: 16, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
@@ -133,7 +141,7 @@ export default function LottieCard({
             lottieRef={lottieRef}
             animationData={modifiedData}
             loop={loop}
-            autoplay={false}
+            autoplay={true}
             style={{
               width: "100%",
               height: "100%",
@@ -249,7 +257,7 @@ export default function LottieCard({
             className="text-[10px] mt-0.5 font-mono tabular-nums"
             style={{ color: "var(--text-tertiary)" }}
           >
-            {file.meta.width}&times;{file.meta.height} &middot; {formatDuration(file.meta.duration)} &middot; {file.meta.totalFrames}f
+            {file.meta.width}&times;{file.meta.height} &middot; {formatDuration(file.meta.duration)} &middot; {Math.round(file.meta.totalFrames)}f
           </p>
         </div>
       </div>

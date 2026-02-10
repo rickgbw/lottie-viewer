@@ -12,9 +12,11 @@ interface InspectorProps {
   hiddenLayers: number[];
   speed: number;
   onColorChange: (originalHex: string, newHex: string) => void;
-  onResetColors: () => void;
   onToggleLayer: (layerIndex: number) => void;
   onSpeedChange: (speed: number) => void;
+  onRenameLayer: (layerIndex: number, newName: string) => void;
+  onResetAll: () => void;
+  hasAnyModification: boolean;
 }
 
 
@@ -99,6 +101,68 @@ function PropertyRow({ label, value, mono = false }: { label: string; value: str
   );
 }
 
+function EditableLayerName({
+  name,
+  isHidden,
+  onRename,
+}: {
+  name: string;
+  isHidden: boolean;
+  onRename: (newName: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name);
+
+  const commit = useCallback(() => {
+    setEditing(false);
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== name) {
+      onRename(trimmed);
+    } else {
+      setDraft(name);
+    }
+  }, [draft, name, onRename]);
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") {
+            setDraft(name);
+            setEditing(false);
+          }
+        }}
+        className="text-[10px] font-medium flex-1 min-w-0 bg-transparent outline-none border-b px-0 py-0 rounded-none"
+        style={{
+          color: isHidden ? "var(--text-tertiary)" : "var(--text-secondary)",
+          borderColor: "var(--bg-accent)",
+        }}
+      />
+    );
+  }
+
+  return (
+    <span
+      className="text-[10px] font-medium truncate flex-1 min-w-0 cursor-text"
+      style={{
+        color: isHidden ? "var(--text-tertiary)" : "var(--text-secondary)",
+        textDecoration: isHidden ? "line-through" : "none",
+      }}
+      onDoubleClick={() => {
+        setDraft(name);
+        setEditing(true);
+      }}
+    >
+      {name}
+    </span>
+  );
+}
+
 function ColorSwatch({
   originalColor,
   currentColor,
@@ -142,19 +206,17 @@ export default function Inspector({
   hiddenLayers,
   speed,
   onColorChange,
-  onResetColors,
   onToggleLayer,
   onSpeedChange,
+  onRenameLayer,
+  onResetAll,
+  hasAnyModification,
 }: InspectorProps) {
   const colors = useMemo(() => {
     if (!file) return [];
     return extractColors(file.data);
   }, [file]);
 
-  const modifiedCount = Object.keys(colorOverrides).length;
-  const hiddenCount = hiddenLayers.length;
-  const isSpeedModified = speed !== 1;
-  const hasAnyModification = modifiedCount > 0 || hiddenCount > 0 || isSpeedModified;
 
   const handleDownload = useCallback(() => {
     if (!file) return;
@@ -177,10 +239,29 @@ export default function Inspector({
       }}
     >
       {/* Header */}
-      <div className="flex items-center px-4 h-11 border-b shrink-0" style={{ borderColor: "var(--border-subtle)" }}>
+      <div className="flex items-center justify-between px-4 h-11 border-b shrink-0" style={{ borderColor: "var(--border-subtle)" }}>
         <span className="text-[13px] font-semibold tracking-[-0.01em]" style={{ color: "var(--text-primary)" }}>
           Properties
         </span>
+        {file && hasAnyModification && (
+          <button
+            onClick={onResetAll}
+            className="flex items-center gap-1 text-[10px] font-medium rounded-md px-1.5 py-1 transition-colors duration-100"
+            style={{ color: "var(--text-tertiary)" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "var(--text-danger)";
+              e.currentTarget.style.background = "var(--bg-canvas)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "var(--text-tertiary)";
+              e.currentTarget.style.background = "transparent";
+            }}
+            title="Reset all modifications"
+          >
+            <ResetIcon size={10} />
+            Reset
+          </button>
+        )}
       </div>
 
       {/* Scrollable content */}
@@ -201,8 +282,8 @@ export default function Inspector({
               >
                 <PropertyRow label="Version" value={file.meta.version} mono />
                 <PropertyRow label="Dimensions" value={`${file.meta.width} × ${file.meta.height}`} mono />
-                <PropertyRow label="Frame Rate" value={`${file.meta.frameRate} fps`} mono />
-                <PropertyRow label="Frames" value={`${file.meta.totalFrames}`} mono />
+                <PropertyRow label="Frame Rate" value={`${Math.round(file.meta.frameRate)} fps`} mono />
+                <PropertyRow label="Frames" value={`${Math.round(file.meta.totalFrames)}`} mono />
                 <PropertyRow label="Duration" value={`${file.meta.duration.toFixed(2)}s`} mono />
                 <PropertyRow label="File Size" value={formatSize(file.size)} mono />
               </CollapsibleSection>
@@ -226,7 +307,7 @@ export default function Inspector({
                     />
                     <span
                       className="text-[11px] font-mono font-medium tabular-nums w-[34px] text-right shrink-0"
-                      style={{ color: isSpeedModified ? "var(--bg-accent)" : "var(--text-secondary)" }}
+                      style={{ color: speed !== 1 ? "var(--bg-accent)" : "var(--text-secondary)" }}
                     >
                       {speed.toFixed(1)}x
                     </span>
@@ -258,16 +339,7 @@ export default function Inspector({
               <CollapsibleSection
                 title="Colors"
                 icon={<PaletteIcon size={13} />}
-                badge={
-                  modifiedCount > 0 ? (
-                    <span
-                      className="text-[9px] font-medium px-1.5 py-0.5 rounded-full"
-                      style={{ background: "var(--bg-accent-subtle)", color: "var(--bg-accent)" }}
-                    >
-                      {modifiedCount}
-                    </span>
-                  ) : undefined
-                }
+                badge={undefined}
               >
                 {colors.length === 0 ? (
                   <p className="text-[10px] py-2" style={{ color: "var(--text-tertiary)" }}>
@@ -285,22 +357,6 @@ export default function Inspector({
                         />
                       ))}
                     </div>
-                    {modifiedCount > 0 && (
-                      <button
-                        onClick={onResetColors}
-                        className="flex items-center gap-1.5 mt-2.5 text-[10px] font-medium transition-colors duration-100"
-                        style={{ color: "var(--text-tertiary)" }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color = "var(--bg-accent)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color = "var(--text-tertiary)";
-                        }}
-                      >
-                        <ResetIcon size={10} />
-                        Reset all colors
-                      </button>
-                    )}
                   </>
                 )}
               </CollapsibleSection>
@@ -309,16 +365,7 @@ export default function Inspector({
               <CollapsibleSection
                 title="Layers"
                 icon={<LayersIcon size={13} />}
-                badge={
-                  hiddenCount > 0 ? (
-                    <span
-                      className="text-[9px] font-medium px-1.5 py-0.5 rounded-full"
-                      style={{ background: "#fef2f0", color: "var(--text-danger)" }}
-                    >
-                      {hiddenCount} hidden
-                    </span>
-                  ) : undefined
-                }
+                badge={undefined}
               >
                 <div className="space-y-0.5 mt-1">
                   {((file.data.layers as Array<{ nm?: string; ty?: number }>) || []).map((layer, i) => {
@@ -349,15 +396,11 @@ export default function Inspector({
                                 : "#94a3b8",
                           }}
                         />
-                        <span
-                          className="text-[10px] font-medium truncate flex-1 min-w-0"
-                          style={{
-                            color: isHidden ? "var(--text-tertiary)" : "var(--text-secondary)",
-                            textDecoration: isHidden ? "line-through" : "none",
-                          }}
-                        >
-                          {layer.nm || `Layer ${i + 1}`}
-                        </span>
+                        <EditableLayerName
+                          name={layer.nm || `Layer ${i + 1}`}
+                          isHidden={isHidden}
+                          onRename={(newName) => onRenameLayer(i, newName)}
+                        />
                         <span className="text-[9px] shrink-0 font-mono" style={{ color: "var(--text-tertiary)" }}>
                           {layer.ty === 0
                             ? "Pre"

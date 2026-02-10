@@ -41,6 +41,8 @@ export interface ViewerState {
   hiddenLayers: Record<string, number[]>;
   /** Per-file speed overrides: fileId → speed multiplier */
   speedOverrides: Record<string, number>;
+  /** Per-file original data snapshot for reset: fileId → original Lottie JSON */
+  originalData: Record<string, Record<string, unknown>>;
 }
 
 function extractMeta(data: Record<string, unknown>): LottieFile["meta"] {
@@ -68,7 +70,7 @@ export function useLottieStore() {
   const [state, setState] = useState<ViewerState>({
     files: [],
     selectedId: null,
-    isPlaying: false,
+    isPlaying: true,
     loop: true,
     direction: 1,
     showGrid: true,
@@ -79,6 +81,7 @@ export function useLottieStore() {
     colorOverrides: {},
     hiddenLayers: {},
     speedOverrides: {},
+    originalData: {},
   });
 
   const addFiles = useCallback((newFiles: { name: string; data: Record<string, unknown>; size: number }[]) => {
@@ -92,10 +95,15 @@ export function useLottieStore() {
         meta: extractMeta(f.data),
       }));
       const updated = [...prev.files, ...lottieFiles];
+      const origData = { ...prev.originalData };
+      for (const lf of lottieFiles) {
+        origData[lf.id] = lf.data;
+      }
       return {
         ...prev,
         files: updated,
         selectedId: prev.selectedId || lottieFiles[0]?.id || null,
+        originalData: origData,
       };
     });
   }, []);
@@ -103,10 +111,13 @@ export function useLottieStore() {
   const removeFile = useCallback((id: string) => {
     setState((prev) => {
       const updated = prev.files.filter((f) => f.id !== id);
+      const origData = { ...prev.originalData };
+      delete origData[id];
       return {
         ...prev,
         files: updated,
         selectedId: prev.selectedId === id ? (updated[0]?.id || null) : prev.selectedId,
+        originalData: origData,
       };
     });
   }, []);
@@ -216,6 +227,34 @@ export function useLottieStore() {
     });
   }, []);
 
+  const resetFileModifications = useCallback((fileId: string) => {
+    setState((prev) => {
+      const origData = prev.originalData[fileId];
+      const files = origData
+        ? prev.files.map((f) => (f.id === fileId ? { ...f, data: origData } : f))
+        : prev.files;
+      const colorOverrides = { ...prev.colorOverrides };
+      delete colorOverrides[fileId];
+      const hiddenLayers = { ...prev.hiddenLayers };
+      delete hiddenLayers[fileId];
+      const speedOverrides = { ...prev.speedOverrides };
+      delete speedOverrides[fileId];
+      return { ...prev, files, colorOverrides, hiddenLayers, speedOverrides };
+    });
+  }, []);
+
+  const renameLayer = useCallback((fileId: string, layerIndex: number, newName: string) => {
+    setState((prev) => {
+      const files = prev.files.map((f) => {
+        if (f.id !== fileId) return f;
+        const layers = [...(f.data.layers as Array<Record<string, unknown>>)];
+        layers[layerIndex] = { ...layers[layerIndex], nm: newName };
+        return { ...f, data: { ...f.data, layers } };
+      });
+      return { ...prev, files };
+    });
+  }, []);
+
   const removeAllFiles = useCallback(() => {
     setState((prev) => ({
       ...prev,
@@ -226,6 +265,7 @@ export function useLottieStore() {
       colorOverrides: {},
       hiddenLayers: {},
       speedOverrides: {},
+      originalData: {},
     }));
   }, []);
 
@@ -250,5 +290,7 @@ export function useLottieStore() {
     setColorOverride,
     resetColors,
     toggleLayerVisibility,
+    renameLayer,
+    resetFileModifications,
   };
 }

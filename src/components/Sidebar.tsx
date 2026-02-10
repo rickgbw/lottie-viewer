@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence } from "motion/react";
 import { FileIcon, TrashIcon, UploadIcon, LottieIcon } from "./Icons";
@@ -137,6 +137,14 @@ function BgColorRow({ bgColor, onBgColorChange }: { bgColor: string; onBgColorCh
 }
 
 export default function Sidebar({ files, selectedId, bgColor, onSelect, onRemove, onRemoveAll, onAddFiles, onBgColorChange }: SidebarProps) {
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    if (selectedId && itemRefs.current[selectedId]) {
+      itemRefs.current[selectedId]!.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [selectedId]);
+
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       const readers = acceptedFiles.map(
@@ -229,6 +237,7 @@ export default function Sidebar({ files, selectedId, bgColor, onSelect, onRemove
             files.map((file, index) => (
               <motion.div
                 key={file.id}
+                ref={(el) => { itemRefs.current[file.id] = el; }}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -20, transition: { duration: 0.15 } }}
@@ -264,7 +273,7 @@ export default function Sidebar({ files, selectedId, bgColor, onSelect, onRemove
                     {file.name.replace(/\.json$/, "")}
                   </p>
                   <p className="text-[10px] mt-0.5 font-mono" style={{ color: "var(--text-tertiary)" }}>
-                    {formatSize(file.size)} &middot; {formatDuration(file.meta.duration)} &middot; {file.meta.totalFrames}f
+                    {formatSize(file.size)} &middot; {formatDuration(file.meta.duration)} &middot; {Math.round(file.meta.totalFrames)}f
                   </p>
                 </div>
                 <button

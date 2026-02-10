@@ -25,8 +25,9 @@ export default function Home() {
     setGridSize,
     toggleCardPlaying,
     setColorOverride,
-    resetColors,
     toggleLayerVisibility,
+    renameLayer,
+    resetFileModifications,
   } = useLottieStore();
 
   const onDrop = useCallback(
@@ -155,15 +156,28 @@ export default function Home() {
         onColorChange={(originalHex, newHex) => {
           if (selectedFile) setColorOverride(selectedFile.id, originalHex, newHex);
         }}
-        onResetColors={() => {
-          if (selectedFile) resetColors(selectedFile.id);
-        }}
         onToggleLayer={(layerIndex) => {
           if (selectedFile) toggleLayerVisibility(selectedFile.id, layerIndex);
         }}
         onSpeedChange={(speed) => {
           if (selectedFile) setFileSpeed(selectedFile.id, speed);
         }}
+        onRenameLayer={(layerIndex, newName) => {
+          if (selectedFile) renameLayer(selectedFile.id, layerIndex, newName);
+        }}
+        onResetAll={() => {
+          if (selectedFile) resetFileModifications(selectedFile.id);
+        }}
+        hasAnyModification={
+          selectedFile
+            ? !!(
+                Object.keys(state.colorOverrides[selectedFile.id] || {}).length ||
+                (state.hiddenLayers[selectedFile.id] || []).length ||
+                state.speedOverrides[selectedFile.id] ||
+                (state.originalData[selectedFile.id] && state.originalData[selectedFile.id] !== selectedFile.data)
+              )
+            : false
+        }
       />
     </div>
   );
