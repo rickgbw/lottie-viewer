@@ -17,6 +17,7 @@ interface InspectorProps {
   onRenameLayer: (layerIndex: number, newName: string) => void;
   onResetAll: () => void;
   hasAnyModification: boolean;
+  hideHeader?: boolean;
 }
 
 
@@ -211,6 +212,7 @@ export default function Inspector({
   onRenameLayer,
   onResetAll,
   hasAnyModification,
+  hideHeader,
 }: InspectorProps) {
   const colors = useMemo(() => {
     if (!file) return [];
@@ -232,37 +234,39 @@ export default function Inspector({
 
   return (
     <div
-      className="flex h-full w-[240px] flex-col border-l"
+      className="flex h-full w-full flex-col"
       style={{
         borderColor: "var(--border-default)",
         background: "var(--bg-surface)",
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 h-11 border-b shrink-0" style={{ borderColor: "var(--border-subtle)" }}>
-        <span className="text-[13px] font-semibold tracking-[-0.01em]" style={{ color: "var(--text-primary)" }}>
-          Properties
-        </span>
-        {file && hasAnyModification && (
-          <button
-            onClick={onResetAll}
-            className="flex items-center gap-1 text-[10px] font-medium rounded-md px-1.5 py-1 transition-colors duration-100"
-            style={{ color: "var(--text-tertiary)" }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "var(--text-danger)";
-              e.currentTarget.style.background = "var(--bg-canvas)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "var(--text-tertiary)";
-              e.currentTarget.style.background = "transparent";
-            }}
-            title="Reset all modifications"
-          >
-            <ResetIcon size={10} />
-            Reset
-          </button>
-        )}
-      </div>
+      {!hideHeader && (
+        <div className="flex items-center justify-between px-4 h-11 border-b shrink-0" style={{ borderColor: "var(--border-subtle)" }}>
+          <span className="text-[13px] font-semibold tracking-[-0.01em]" style={{ color: "var(--text-primary)" }}>
+            Properties
+          </span>
+          {file && hasAnyModification && (
+            <button
+              onClick={onResetAll}
+              className="flex items-center gap-1 text-[10px] font-medium rounded-md px-1.5 py-1 transition-colors duration-100"
+              style={{ color: "var(--text-tertiary)" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "var(--text-danger)";
+                e.currentTarget.style.background = "var(--bg-canvas)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "var(--text-tertiary)";
+                e.currentTarget.style.background = "transparent";
+              }}
+              title="Reset all modifications"
+            >
+              <ResetIcon size={10} />
+              Reset
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">

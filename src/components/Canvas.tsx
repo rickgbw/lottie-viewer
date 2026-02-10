@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence } from "motion/react";
 import LottieCard from "./LottieCard";
-import { PlayIcon, PauseIcon, LoopIcon, ReverseIcon, UploadIcon, GridSmallIcon, GridMediumIcon, GridLargeIcon, GridXLargeIcon } from "./Icons";
+import { PlayIcon, PauseIcon, LoopIcon, ReverseIcon, UploadIcon, GridSmallIcon, GridMediumIcon, GridLargeIcon, GridXLargeIcon, MenuIcon, InfoIcon } from "./Icons";
 import type { LottieFile, GridSize } from "@/hooks/useLottieStore";
 
 interface CanvasProps {
@@ -29,6 +29,8 @@ interface CanvasProps {
   colorOverrides: Record<string, Record<string, string>>;
   hiddenLayers: Record<string, number[]>;
   speedOverrides: Record<string, number>;
+  onOpenSidebar?: () => void;
+  onOpenInspector?: () => void;
 }
 
 const GRID_SIZE_CONFIG: Record<GridSize, { minWidth: string; label: string }> = {
@@ -67,6 +69,8 @@ export default function Canvas({
   colorOverrides,
   hiddenLayers,
   speedOverrides,
+  onOpenSidebar,
+  onOpenInspector,
 }: CanvasProps) {
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -110,6 +114,19 @@ export default function Canvas({
       >
         {/* Left: Playback controls */}
         <div className="flex items-center gap-0.5">
+          {/* Mobile hamburger */}
+          {onOpenSidebar && (
+            <button
+              onClick={onOpenSidebar}
+              className="flex md:hidden items-center justify-center h-7 w-7 rounded-md transition-all duration-100"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-canvas)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <MenuIcon size={16} />
+            </button>
+          )}
+
           <button
             onClick={() => onPlayPause(!isPlaying)}
             className="flex items-center justify-center h-7 w-7 rounded-md transition-all duration-100"
@@ -172,9 +189,9 @@ export default function Canvas({
 
         {/* Right: Grid size + dot grid toggle */}
         <div className="flex items-center gap-0.5">
-          {/* Grid size selector — segmented control */}
+          {/* Grid size selector — segmented control (hidden on mobile) */}
           <div
-            className="flex items-center rounded-md p-0.5"
+            className="hidden md:flex items-center rounded-md p-0.5"
             style={{ background: "var(--bg-canvas)" }}
           >
             {GRID_SIZE_OPTIONS.map(({ key, icon: Icon }) => (
@@ -228,6 +245,19 @@ export default function Canvas({
               <circle cx="12" cy="12" r="1" />
             </svg>
           </button>
+
+          {/* Mobile inspector button */}
+          {onOpenInspector && (
+            <button
+              onClick={onOpenInspector}
+              className="flex md:hidden items-center justify-center h-7 w-7 rounded-md transition-all duration-100"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-canvas)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <InfoIcon size={16} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -297,6 +327,7 @@ export default function Canvas({
                     onSelect={onSelect}
                     onRemove={onRemove}
                     onTogglePlay={onToggleCardPlay}
+                    onOpenInspector={onOpenInspector}
                   />
                 ))}
               </AnimatePresence>

@@ -246,3 +246,22 @@ export function ResetIcon({ size = 16 }: { size?: number }) {
     </svg>
   );
 }
+
+export function MenuIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <line x1="2.5" y1="4" x2="13.5" y2="4" />
+      <line x1="2.5" y1="8" x2="13.5" y2="8" />
+      <line x1="2.5" y1="12" x2="13.5" y2="12" />
+    </svg>
+  );
+}
+
+export function CloseIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <line x1="4" y1="4" x2="12" y2="12" />
+      <line x1="12" y1="4" x2="4" y2="12" />
+    </svg>
+  );
+}

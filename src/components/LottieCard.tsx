@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import Lottie, { LottieRefCurrentProps } from "lottie-react";
 import { motion, AnimatePresence } from "motion/react";
-import { PlayIcon, PauseIcon, TrashIcon, DownloadIcon } from "./Icons";
+import { PlayIcon, PauseIcon, TrashIcon, DownloadIcon, InfoIcon } from "./Icons";
 import { applyModifications } from "@/lib/lottieUtils";
 import type { LottieFile } from "@/hooks/useLottieStore";
 
@@ -21,6 +21,7 @@ interface LottieCardProps {
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
   onTogglePlay: (id: string) => void;
+  onOpenInspector?: () => void;
 }
 
 function formatDuration(seconds: number): string {
@@ -42,11 +43,13 @@ export default function LottieCard({
   onSelect,
   onRemove,
   onTogglePlay,
+  onOpenInspector,
 }: LottieCardProps) {
   const lottieRef = useRef<LottieRefCurrentProps>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState(false);
   const [currentFrame, setCurrentFrame] = useState(0);
+  const [finished, setFinished] = useState(false);
 
   const isPlaying = isCardPlaying;
 
@@ -260,6 +263,24 @@ export default function LottieCard({
             {file.meta.width}&times;{file.meta.height} &middot; {formatDuration(file.meta.duration)} &middot; {Math.round(file.meta.totalFrames)}f
           </p>
         </div>
+
+        {/* Mobile info button */}
+        {onOpenInspector && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(file.id);
+              onOpenInspector();
+            }}
+            className="flex md:hidden items-center justify-center h-6 w-6 shrink-0 rounded-md transition-all duration-100"
+            style={{
+              background: "var(--bg-canvas)",
+              color: "var(--text-tertiary)",
+            }}
+          >
+            <InfoIcon size={13} />
+          </button>
+        )}
       </div>
     </motion.div>
   );

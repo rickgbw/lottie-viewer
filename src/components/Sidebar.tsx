@@ -175,7 +175,7 @@ export default function Sidebar({ files, selectedId, bgColor, onSelect, onRemove
   });
 
   return (
-    <div className="flex h-full w-[260px] flex-col border-r" style={{ borderColor: "var(--border-default)", background: "var(--bg-surface)" }}>
+    <div className="flex h-full w-full flex-col" style={{ background: "var(--bg-surface)" }}>
       {/* Header */}
       <div className="flex items-center gap-2.5 px-4 h-11 shrink-0 border-b" style={{ borderColor: "var(--border-subtle)" }}>
         <LottieIcon size={22} />

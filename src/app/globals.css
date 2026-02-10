@@ -60,6 +60,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+body.overlay-open {
+  overflow: hidden;
+}
+
 /* Custom scrollbar — Figma style */
 ::-webkit-scrollbar {
   width: 6px;
