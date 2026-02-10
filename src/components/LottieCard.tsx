@@ -120,8 +120,8 @@ export default function LottieCard({
       exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
       transition={{ duration: 0.3, delay: index * 0.04, ease: [0.25, 0.46, 0.45, 0.94] }}
       onClick={() => onSelect(file.id)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onPointerEnter={(e) => { if (e.pointerType === "mouse") setHovered(true); }}
+      onPointerLeave={(e) => { if (e.pointerType === "mouse") setHovered(false); }}
       className="group relative flex flex-col rounded-xl overflow-hidden cursor-pointer transition-shadow duration-150"
       style={{
         background: "var(--bg-surface)",

@@ -261,7 +261,7 @@ export default function Home() {
 
       {/* Desktop Inspector */}
       {!isMobile && (
-        <div className="w-[240px] shrink-0 border-l" style={{ borderColor: "var(--border-default)" }}>
+        <div className="w-[240px] shrink-0 border-l flex flex-col" style={{ borderColor: "var(--border-default)" }}>
           <Inspector {...inspectorProps} />
         </div>
       )}

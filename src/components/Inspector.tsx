@@ -234,7 +234,7 @@ export default function Inspector({
 
   return (
     <div
-      className="flex h-full w-full flex-col"
+      className="flex flex-1 min-h-0 w-full flex-col"
       style={{
         borderColor: "var(--border-default)",
         background: "var(--bg-surface)",
