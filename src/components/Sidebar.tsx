@@ -176,7 +176,7 @@ export default function Sidebar({ files, selectedId, bgColor, onSelect, onRemove
     [onAddFiles]
   );
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
     accept: { "application/json": [".json", ".lottie"], "image/svg+xml": [".svg"] },
     noClick: files.length > 0,
@@ -317,6 +317,7 @@ export default function Sidebar({ files, selectedId, bgColor, onSelect, onRemove
           <div {...getRootProps()}>
             <input {...getInputProps()} />
             <button
+              onClick={open}
               className="flex w-full items-center justify-center gap-2 py-2 rounded-lg text-[12px] font-medium transition-all duration-150"
               style={{
                 background: isDragActive ? "var(--bg-accent-subtle)" : "var(--bg-canvas)",
