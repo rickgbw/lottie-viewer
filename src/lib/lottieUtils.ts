@@ -24,6 +24,65 @@ function isColorArray(k: unknown[]): boolean {
  * Extracts all unique static colors from a Lottie JSON.
  * Finds fill (ty=fl), stroke (ty=st) color properties and solid layer colors (sc).
  */
+/**
+ * Extracts unique hex colors from raw SVG markup.
+ * Looks at fill, stroke, stop-color attributes and inline style properties.
+ */
+export function extractSvgColors(svgContent: string): string[] {
+  const colors = new Set<string>();
+
+  // Match hex colors in fill="", stroke="", stop-color="", and style=""
+  const attrRegex = /(?:fill|stroke|stop-color|color)\s*[:=]\s*["']?\s*(#[0-9a-fA-F]{3,6})\b/g;
+  let m;
+  while ((m = attrRegex.exec(svgContent)) !== null) {
+    let hex = m[1].toLowerCase();
+    // Expand shorthand #abc → #aabbcc
+    if (hex.length === 4) {
+      hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+    }
+    if (hex !== "#000000" || svgContent.includes(m[0])) {
+      colors.add(hex);
+    }
+  }
+
+  // Also match rgb() values
+  const rgbRegex = /(?:fill|stroke|stop-color|color)\s*[:=]\s*["']?\s*rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/g;
+  while ((m = rgbRegex.exec(svgContent)) !== null) {
+    const toHex = (v: number) => Math.min(255, Math.max(0, v)).toString(16).padStart(2, "0");
+    colors.add(`#${toHex(parseInt(m[1]))}${toHex(parseInt(m[2]))}${toHex(parseInt(m[3]))}`);
+  }
+
+  return Array.from(colors);
+}
+
+/**
+ * Applies color overrides to raw SVG markup by replacing hex values in
+ * fill, stroke, stop-color, and color attributes/style properties.
+ */
+export function applySvgColorOverrides(svgContent: string, overrides: Record<string, string>): string {
+  if (!Object.keys(overrides).length) return svgContent;
+
+  // Build a map that also includes shorthand variants
+  const map = new Map<string, string>();
+  for (const [from, to] of Object.entries(overrides)) {
+    map.set(from.toLowerCase(), to.toLowerCase());
+  }
+
+  // Replace hex colors in relevant attribute/style contexts
+  return svgContent.replace(
+    /((?:fill|stroke|stop-color|color)\s*[:=]\s*["']?\s*)(#[0-9a-fA-F]{3,6})\b/g,
+    (match, prefix: string, hex: string) => {
+      let normalized = hex.toLowerCase();
+      // Expand shorthand #abc → #aabbcc
+      if (normalized.length === 4) {
+        normalized = `#${normalized[1]}${normalized[1]}${normalized[2]}${normalized[2]}${normalized[3]}${normalized[3]}`;
+      }
+      const replacement = map.get(normalized);
+      return replacement ? `${prefix}${replacement}` : match;
+    }
+  );
+}
+
 export function extractColors(data: Record<string, unknown>): string[] {
   const colors = new Set<string>();
 

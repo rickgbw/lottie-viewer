@@ -24,7 +24,7 @@ interface CanvasProps {
   onDirectionToggle: () => void;
   onShowGridChange: (show: boolean) => void;
   onGridSizeChange: (size: GridSize) => void;
-  onAddFiles: (files: { name: string; data: Record<string, unknown>; size: number }[]) => void;
+  onAddFiles: (files: { name: string; data: Record<string, unknown>; size: number; fileType?: "lottie" | "svg"; svgContent?: string }[]) => void;
   onToggleCardPlay: (id: string) => void;
   colorOverrides: Record<string, Record<string, string>>;
   hiddenLayers: Record<string, number[]>;
@@ -76,14 +76,22 @@ export default function Canvas({
     (acceptedFiles: File[]) => {
       const readers = acceptedFiles.map(
         (file) =>
-          new Promise<{ name: string; data: Record<string, unknown>; size: number }>((resolve, reject) => {
+          new Promise<{ name: string; data: Record<string, unknown>; size: number; fileType?: "lottie" | "svg"; svgContent?: string }>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => {
-              try {
-                const data = JSON.parse(reader.result as string);
-                resolve({ name: file.name, data, size: file.size });
-              } catch {
-                reject(new Error(`Invalid JSON in ${file.name}`));
+              const text = reader.result as string;
+              if (file.name.toLowerCase().endsWith(".svg")) {
+                const wMatch = text.match(/viewBox="[^"]*?\s([\d.]+)\s([\d.]+)"/);
+                const w = wMatch ? parseFloat(wMatch[1]) : 0;
+                const h = wMatch ? parseFloat(wMatch[2]) : 0;
+                resolve({ name: file.name, data: { w, h }, size: file.size, fileType: "svg", svgContent: text });
+              } else {
+                try {
+                  const data = JSON.parse(text);
+                  resolve({ name: file.name, data, size: file.size, fileType: "lottie" });
+                } catch {
+                  reject(new Error(`Invalid JSON in ${file.name}`));
+                }
               }
             };
             reader.onerror = () => reject(reader.error);
@@ -97,7 +105,7 @@ export default function Canvas({
 
   const { getRootProps: getEmptyDropProps, getInputProps: getEmptyInputProps, isDragActive: emptyDragActive } = useDropzone({
     onDrop,
-    accept: { "application/json": [".json", ".lottie"] },
+    accept: { "application/json": [".json", ".lottie"], "image/svg+xml": [".svg"] },
   });
 
   const { minWidth } = GRID_SIZE_CONFIG[gridSize];
@@ -184,7 +192,7 @@ export default function Canvas({
           className="text-[12px] font-medium"
           style={{ color: "var(--text-tertiary)" }}
         >
-          {files.length > 0 && `${files.length} animation${files.length !== 1 ? "s" : ""}`}
+          {files.length > 0 && `${files.length} file${files.length !== 1 ? "s" : ""}`}
         </span>
 
         {/* Right: Grid size + dot grid toggle */}
@@ -293,10 +301,10 @@ export default function Canvas({
               </motion.div>
               <div className="text-center">
                 <p className="text-[14px] font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Drop Lottie files here
+                  Drop files here
                 </p>
                 <p className="text-[12px] mt-1.5" style={{ color: "var(--text-tertiary)" }}>
-                  or click to browse &middot; .json files supported
+                  or click to browse &middot; .json, .lottie, .svg supported
                 </p>
               </div>
             </motion.div>

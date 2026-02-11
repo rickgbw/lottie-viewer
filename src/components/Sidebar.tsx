@@ -13,7 +13,7 @@ interface SidebarProps {
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
   onRemoveAll: () => void;
-  onAddFiles: (files: { name: string; data: Record<string, unknown>; size: number }[]) => void;
+  onAddFiles: (files: { name: string; data: Record<string, unknown>; size: number; fileType?: "lottie" | "svg"; svgContent?: string }[]) => void;
   onBgColorChange: (color: string) => void;
 }
 
@@ -149,14 +149,22 @@ export default function Sidebar({ files, selectedId, bgColor, onSelect, onRemove
     (acceptedFiles: File[]) => {
       const readers = acceptedFiles.map(
         (file) =>
-          new Promise<{ name: string; data: Record<string, unknown>; size: number }>((resolve, reject) => {
+          new Promise<{ name: string; data: Record<string, unknown>; size: number; fileType?: "lottie" | "svg"; svgContent?: string }>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => {
-              try {
-                const data = JSON.parse(reader.result as string);
-                resolve({ name: file.name, data, size: file.size });
-              } catch {
-                reject(new Error(`Invalid JSON in ${file.name}`));
+              const text = reader.result as string;
+              if (file.name.toLowerCase().endsWith(".svg")) {
+                const wMatch = text.match(/viewBox="[^"]*?\s([\d.]+)\s([\d.]+)"/);
+                const w = wMatch ? parseFloat(wMatch[1]) : 0;
+                const h = wMatch ? parseFloat(wMatch[2]) : 0;
+                resolve({ name: file.name, data: { w, h }, size: file.size, fileType: "svg", svgContent: text });
+              } else {
+                try {
+                  const data = JSON.parse(text);
+                  resolve({ name: file.name, data, size: file.size, fileType: "lottie" });
+                } catch {
+                  reject(new Error(`Invalid JSON in ${file.name}`));
+                }
               }
             };
             reader.onerror = () => reject(reader.error);
@@ -170,7 +178,7 @@ export default function Sidebar({ files, selectedId, bgColor, onSelect, onRemove
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { "application/json": [".json", ".lottie"] },
+    accept: { "application/json": [".json", ".lottie"], "image/svg+xml": [".svg"] },
     noClick: files.length > 0,
   });
 
@@ -187,7 +195,7 @@ export default function Sidebar({ files, selectedId, bgColor, onSelect, onRemove
       {/* File list section label */}
       <div className="flex items-center justify-between px-4 py-2.5">
         <span className="text-[11px] font-semibold uppercase tracking-[0.05em]" style={{ color: "var(--text-tertiary)" }}>
-          Animations
+          Files
         </span>
         <div className="flex items-center gap-1.5">
           <span
@@ -209,7 +217,7 @@ export default function Sidebar({ files, selectedId, bgColor, onSelect, onRemove
                 e.currentTarget.style.color = "var(--text-tertiary)";
                 e.currentTarget.style.background = "transparent";
               }}
-              title="Remove all animations"
+              title="Remove all files"
             >
               <TrashIcon size={11} />
             </button>
@@ -230,7 +238,7 @@ export default function Sidebar({ files, selectedId, bgColor, onSelect, onRemove
               className="flex items-center justify-center h-full px-4"
             >
               <p className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
-                No animations yet
+                No files yet
               </p>
             </motion.div>
           ) : (
@@ -270,10 +278,13 @@ export default function Sidebar({ files, selectedId, bgColor, onSelect, onRemove
                     className="text-[12px] font-medium truncate leading-tight"
                     style={{ color: "var(--text-primary)" }}
                   >
-                    {file.name.replace(/\.json$/, "")}
+                    {file.name.replace(/\.(json|svg)$/, "")}
                   </p>
                   <p className="text-[10px] mt-0.5 font-mono" style={{ color: "var(--text-tertiary)" }}>
-                    {formatSize(file.size)} &middot; {formatDuration(file.meta.duration)} &middot; {Math.round(file.meta.totalFrames)}f
+                    {file.fileType === "svg"
+                      ? formatSize(file.size)
+                      : <>{formatSize(file.size)} &middot; {formatDuration(file.meta.duration)} &middot; {Math.round(file.meta.totalFrames)}f</>
+                    }
                   </p>
                 </div>
                 <button
@@ -324,7 +335,7 @@ export default function Sidebar({ files, selectedId, bgColor, onSelect, onRemove
               }}
             >
               <UploadIcon size={14} />
-              Import Animation
+              Import File
             </button>
           </div>
         </div>

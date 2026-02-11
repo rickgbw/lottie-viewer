@@ -8,6 +8,8 @@ export interface LottieFile {
   data: Record<string, unknown>;
   size: number;
   addedAt: number;
+  fileType: "lottie" | "svg";
+  svgContent?: string;
   /** Extracted metadata */
   meta: {
     version: string;
@@ -45,7 +47,21 @@ export interface ViewerState {
   originalData: Record<string, Record<string, unknown>>;
 }
 
-function extractMeta(data: Record<string, unknown>): LottieFile["meta"] {
+function extractMeta(data: Record<string, unknown>, fileType: "lottie" | "svg" = "lottie"): LottieFile["meta"] {
+  if (fileType === "svg") {
+    const w = (data.w as number) || 0;
+    const h = (data.h as number) || 0;
+    return {
+      version: "N/A",
+      frameRate: 0,
+      totalFrames: 0,
+      width: w,
+      height: h,
+      duration: 0,
+      layerCount: 0,
+      hasExpressions: false,
+    };
+  }
   const fr = (data.fr as number) || 30;
   const ip = (data.ip as number) || 0;
   const op = (data.op as number) || 0;
@@ -84,7 +100,7 @@ export function useLottieStore() {
     originalData: {},
   });
 
-  const addFiles = useCallback((newFiles: { name: string; data: Record<string, unknown>; size: number }[]) => {
+  const addFiles = useCallback((newFiles: { name: string; data: Record<string, unknown>; size: number; fileType?: "lottie" | "svg"; svgContent?: string }[]) => {
     setState((prev) => {
       const lottieFiles: LottieFile[] = newFiles.map((f) => ({
         id: crypto.randomUUID(),
@@ -92,7 +108,9 @@ export function useLottieStore() {
         data: f.data,
         size: f.size,
         addedAt: Date.now(),
-        meta: extractMeta(f.data),
+        fileType: f.fileType || "lottie",
+        svgContent: f.svgContent,
+        meta: extractMeta(f.data, f.fileType || "lottie"),
       }));
       const updated = [...prev.files, ...lottieFiles];
       const origData = { ...prev.originalData };

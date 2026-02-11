@@ -69,14 +69,22 @@ export default function Home() {
     (acceptedFiles: File[]) => {
       const readers = acceptedFiles.map(
         (file) =>
-          new Promise<{ name: string; data: Record<string, unknown>; size: number }>((resolve, reject) => {
+          new Promise<{ name: string; data: Record<string, unknown>; size: number; fileType?: "lottie" | "svg"; svgContent?: string }>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => {
-              try {
-                const data = JSON.parse(reader.result as string);
-                resolve({ name: file.name, data, size: file.size });
-              } catch {
-                reject(new Error(`Invalid JSON in ${file.name}`));
+              const text = reader.result as string;
+              if (file.name.toLowerCase().endsWith(".svg")) {
+                const wMatch = text.match(/viewBox="[^"]*?\s([\d.]+)\s([\d.]+)"/);
+                const w = wMatch ? parseFloat(wMatch[1]) : 0;
+                const h = wMatch ? parseFloat(wMatch[2]) : 0;
+                resolve({ name: file.name, data: { w, h }, size: file.size, fileType: "svg", svgContent: text });
+              } else {
+                try {
+                  const data = JSON.parse(text);
+                  resolve({ name: file.name, data, size: file.size, fileType: "lottie" });
+                } catch {
+                  reject(new Error(`Invalid JSON in ${file.name}`));
+                }
               }
             };
             reader.onerror = () => reject(reader.error);
@@ -90,7 +98,7 @@ export default function Home() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { "application/json": [".json", ".lottie"] },
+    accept: { "application/json": [".json", ".lottie"], "image/svg+xml": [".svg"] },
     noClick: true,
     noKeyboard: true,
   });
@@ -176,10 +184,10 @@ export default function Home() {
             </div>
             <div className="text-center">
               <p className="text-[14px] font-semibold" style={{ color: "var(--text-primary)" }}>
-                Drop Lottie files
+                Drop files
               </p>
               <p className="text-[12px] mt-1" style={{ color: "var(--text-tertiary)" }}>
-                JSON or .lottie files
+                JSON, .lottie or .svg files
               </p>
             </div>
           </motion.div>

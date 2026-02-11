@@ -4,7 +4,7 @@ import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import Lottie, { LottieRefCurrentProps } from "lottie-react";
 import { motion, AnimatePresence } from "motion/react";
 import { PlayIcon, PauseIcon, TrashIcon, DownloadIcon, InfoIcon } from "./Icons";
-import { applyModifications } from "@/lib/lottieUtils";
+import { applyModifications, applySvgColorOverrides } from "@/lib/lottieUtils";
 import type { LottieFile } from "@/hooks/useLottieStore";
 
 interface LottieCardProps {
@@ -51,6 +51,7 @@ export default function LottieCard({
   const [currentFrame, setCurrentFrame] = useState(0);
   const [finished, setFinished] = useState(false);
 
+  const isSvg = file.fileType === "svg";
   const isPlaying = isCardPlaying;
 
   useEffect(() => {
@@ -64,6 +65,12 @@ export default function LottieCard({
     if (!hasModifications) return file.data;
     return applyModifications(file.data, colorOverrides, hiddenLayers);
   }, [file.data, colorOverrides, hiddenLayers, hasModifications]);
+
+  const svgDataUri = useMemo(() => {
+    if (!isSvg || !file.svgContent) return "";
+    const content = applySvgColorOverrides(file.svgContent, colorOverrides);
+    return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(content)))}`;
+  }, [isSvg, file.svgContent, colorOverrides]);
 
   useEffect(() => {
     if (!lottieRef.current) return;
@@ -93,6 +100,17 @@ export default function LottieCard({
   }, []);
 
   const handleDownload = useCallback(() => {
+    if (isSvg) {
+      const content = applySvgColorOverrides(file.svgContent || "", colorOverrides);
+      const blob = new Blob([content], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.name;
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
     const data = hasModifications
       ? applyModifications(file.data, colorOverrides, hiddenLayers)
       : file.data;
@@ -103,7 +121,7 @@ export default function LottieCard({
     a.download = file.name;
     a.click();
     URL.revokeObjectURL(url);
-  }, [file, colorOverrides, hiddenLayers, hasModifications]);
+  }, [file, colorOverrides, hiddenLayers, hasModifications, isSvg]);
 
   const handleTogglePlay = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -140,18 +158,32 @@ export default function LottieCard({
       >
         {bgColor === "transparent" && <div className="checkerboard absolute inset-0" />}
         <div className="absolute inset-0 flex items-center justify-center p-4">
-          <Lottie
-            lottieRef={lottieRef}
-            animationData={modifiedData}
-            loop={loop}
-            autoplay={true}
-            style={{
-              width: "100%",
-              height: "100%",
-              position: "relative",
-              zIndex: 1,
-            }}
-          />
+          {isSvg ? (
+            <img
+              src={svgDataUri}
+              alt={file.name}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                position: "relative",
+                zIndex: 1,
+              }}
+            />
+          ) : (
+            <Lottie
+              lottieRef={lottieRef}
+              animationData={modifiedData}
+              loop={loop}
+              autoplay={true}
+              style={{
+                width: "100%",
+                height: "100%",
+                position: "relative",
+                zIndex: 1,
+              }}
+            />
+          )}
         </div>
 
         {/* Top-right actions — visible on hover */}
@@ -211,56 +243,63 @@ export default function LottieCard({
         </AnimatePresence>
 
         {/* Progress bar at bottom of viewport */}
-        <div className="absolute bottom-0 left-0 right-0 h-[2px] z-10" style={{ background: "var(--border-subtle)" }}>
-          <div
-            className="h-full transition-[width] duration-75"
-            style={{
-              width: `${progress * 100}%`,
-              background: isSelected ? "var(--bg-accent)" : isPlaying ? "var(--text-tertiary)" : "var(--border-strong)",
-            }}
-          />
-        </div>
+        {!isSvg && (
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] z-10" style={{ background: "var(--border-subtle)" }}>
+            <div
+              className="h-full transition-[width] duration-75"
+              style={{
+                width: `${progress * 100}%`,
+                background: isSelected ? "var(--bg-accent)" : isPlaying ? "var(--text-tertiary)" : "var(--border-strong)",
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Card footer */}
       <div className="flex items-center gap-2 px-2.5 py-2"
         style={{ borderTop: "1px solid var(--border-subtle)" }}
       >
-        {/* Play/Pause button */}
-        <button
-          onClick={handleTogglePlay}
-          className="flex items-center justify-center h-6 w-6 shrink-0 rounded-md transition-all duration-100"
-          style={{
-            background: isPlaying ? "var(--bg-accent)" : "var(--bg-canvas)",
-            color: isPlaying ? "var(--text-inverse)" : "var(--text-secondary)",
-          }}
-          onMouseEnter={(e) => {
-            if (!isPlaying) {
-              e.currentTarget.style.background = "var(--bg-accent-subtle)";
-              e.currentTarget.style.color = "var(--bg-accent)";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isPlaying) {
-              e.currentTarget.style.background = "var(--bg-canvas)";
-              e.currentTarget.style.color = "var(--text-secondary)";
-            }
-          }}
-        >
-          {isPlaying ? <PauseIcon size={10} /> : <PlayIcon size={10} />}
-        </button>
+        {/* Play/Pause button — hidden for SVGs */}
+        {!isSvg && (
+          <button
+            onClick={handleTogglePlay}
+            className="flex items-center justify-center h-6 w-6 shrink-0 rounded-md transition-all duration-100"
+            style={{
+              background: isPlaying ? "var(--bg-accent)" : "var(--bg-canvas)",
+              color: isPlaying ? "var(--text-inverse)" : "var(--text-secondary)",
+            }}
+            onMouseEnter={(e) => {
+              if (!isPlaying) {
+                e.currentTarget.style.background = "var(--bg-accent-subtle)";
+                e.currentTarget.style.color = "var(--bg-accent)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isPlaying) {
+                e.currentTarget.style.background = "var(--bg-canvas)";
+                e.currentTarget.style.color = "var(--text-secondary)";
+              }
+            }}
+          >
+            {isPlaying ? <PauseIcon size={10} /> : <PlayIcon size={10} />}
+          </button>
+        )}
         <div className="flex-1 min-w-0">
           <p
             className="text-[11px] font-medium truncate leading-tight"
             style={{ color: "var(--text-primary)" }}
           >
-            {file.name.replace(/\.json$/, "")}
+            {file.name.replace(/\.(json|svg)$/, "")}
           </p>
           <p
             className="text-[10px] mt-0.5 font-mono tabular-nums"
             style={{ color: "var(--text-tertiary)" }}
           >
-            {file.meta.width}&times;{file.meta.height} &middot; {formatDuration(file.meta.duration)} &middot; {Math.round(file.meta.totalFrames)}f
+            {isSvg
+              ? <>{file.meta.width}&times;{file.meta.height}</>
+              : <>{file.meta.width}&times;{file.meta.height} &middot; {formatDuration(file.meta.duration)} &middot; {Math.round(file.meta.totalFrames)}f</>
+            }
           </p>
         </div>
 
